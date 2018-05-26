@@ -1,0 +1,17 @@
+@startuml{component.png}
+  [index]
+  [DB]
+  [config.json]
+  package "Pages" {
+    [measure]
+    [analysis]
+    [settings]
+    [manage_subject]
+  }
+  [index] .> [config.json]
+  [index] --> [DB]
+  [index] --> [manage_subject] : inherit DB with props
+  [index] --> [measure]
+  [index] --> [analysis]
+  [index] --> [settings]
+@enduml

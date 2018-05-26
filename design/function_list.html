@@ -1,0 +1,54 @@
+<html>
+  <head>
+    <meta charset="utf-8" cellpadding="10"/>
+    <style>
+      td {
+        padding: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <img class='icon' src='chrome://favicon/yahoo.com' />
+    <h2>機能一覧</h2>
+    <table border="1">
+      <th>機能名</th>
+      <th>内容</th>
+      <th>備考</th>
+      <tr>
+        <td>勉強時間を測る</td>
+        <td>科目をプルダウンで選択後、start, stopボタンをおす</td>
+        <td>選択できる科目は科目管理画面で管理する</td>
+      </tr>
+      <tr>
+        <td>科目を管理する</td>
+        <td>科目一覧画面。削除、追加・変更ができる</td>
+        <td>内部的には追加・変更を同じ画面でしたい</td>
+      </tr>
+      <tr>
+        <td>勉強時間を統計する</td>
+        <td>1日、一ヶ月、一年の勉強時間を集計し、グラフ化</td>
+        <td>過去一年分までしかデータは保持しない。1日、一ヶ月はプルダウンで選択できる。グラフ化にはreact-native-chartが使える。</td>
+      </tr>
+      <tr>
+        <td>SNSに投稿する</td>
+        <td>1日、一ヶ月どのくらい勉強したかツイートできる</td>
+        <td>1日なら科目と時間、一ヶ月なら時間のみにする。</td>
+      </tr>
+      <tr>
+        <td>課金で広告を消す</td>
+        <td>N円課金されたら広告を消す。</td>
+        <td>実現できるかわからない</td>
+      </tr>
+      <tr>
+        <td>レビューを書いてもらう</td>
+        <td>ユーザーにレビューを書いてもらう</td>
+        <td>App Storeのレビュー画面に飛ばす。できれば課金額を減らすなどしたい。</td>
+      </tr>
+      <tr>
+        <td>広告を表示する</td>
+        <td>広告を表示して収益をあげる</td>
+        <td>React Nativeの例が少ないので苦戦するかも。</td>
+      </tr>
+    </table>
+  </body>
+</html>

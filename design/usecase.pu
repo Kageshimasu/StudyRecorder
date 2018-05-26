@@ -1,0 +1,41 @@
+@startuml{usecase.png}
+  left to right direction
+  actor User
+  actor Developer
+
+rectangle "action" {
+    usecase (SNSに投稿できる) as postSNS
+    usecase (一日の勉強時間を参照できる) as refer1day
+    usecase (一週間の勉強時間を参照できる) as refer1week
+    usecase (一ヶ月の勉強時間を参照できる) as refer1month
+    usecase (一年の勉強時間を参照できる) as refer1year
+
+    usecase (レビューを書いてもらう) as review
+    usecase (課金して広告を消すことができる) as removeAd
+
+    usecase (広告を表示する) as showAd
+
+
+    package "メインメニュー" {
+      usecase (科目を管理する) as manageSubject
+      usecase (その科目の勉強時間を測る) as measure
+      usecase (勉強時間を統計する) as analysis
+      usecase (そのほか設定など) as settings
+
+      User --> manageSubject
+      User --> measure : "start, stopを押す"
+      User --> analysis
+      User --> settings
+    }
+    analysis --> postSNS
+    Developer -left-> showAd
+
+
+    settings --> review : include
+    settings --> removeAd : include
+    analysis --> refer1day : include
+    analysis --> refer1week : include
+    analysis --> refer1month : include
+    analysis --> refer1year : include
+}
+@enduml

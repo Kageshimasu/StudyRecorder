@@ -1,0 +1,16 @@
+@startuml{er.png}
+entity Subject {
+  int id [PK]
+  string name [unique]
+}
+
+entity Study {
+  int id [PK],
+  int minutes,
+  int subject_id [FK]
+  date date
+}
+
+Subject --{ Study
+
+@enduml
