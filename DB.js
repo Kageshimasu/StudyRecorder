@@ -29,6 +29,7 @@ export default class DB {
       }
     }
     this.realm = new Realm({schema: [SubjectSchema, StudySchema]})
+    this.updatedDate = new Date()
   }
 
   /**
@@ -38,9 +39,9 @@ export default class DB {
    * @param {String} name 科目名
    * @return {Boolean} 成功したらtrue、それ以外はfalse
    */
-  addSubject(name) {
+  createSubject(name) {
     // nameの重複チェック
-    if (this.realm.objects('Subject').filtered("name = '${name}'").length > 0) {
+    if (0 < this.realm.objects('Subject').filtered("name = '" + name + "'").length) {
       return false
     }
     // 現在のIDの最大値を取得
@@ -51,14 +52,27 @@ export default class DB {
     }
     maxId += 1
     // 登録処理
+    this.addSubject(maxId, name)
+    return true
+  }
+
+  /**
+   * 科目を登録、更新する
+   * 引数のidが既存のidなら更新処理になる
+   * @param {Number} id   科目のID
+   * @param {String} name 科目名
+   */
+  addSubject (id, name) {
     this.realm.write(() => {
       const newSubject = this.realm.create('Subject',
         {
-          id: maxId,
+          id: id,
           name: name
-        })
+        },
+      true)
     })
-    return true
+    // DBの更新日時を更新
+    this.updatedDate = new Date()
   }
 
   /**
@@ -69,13 +83,33 @@ export default class DB {
     this.realm.write(() => {
       this.realm.delete(this.realm.objects('Subject').filtered("id = "+id))
     })
+    // DBの更新日時を更新
+    this.updatedDate = new Date()
   }
 
   /**
    * ID順にソートした(登録日時の照準)科目一覧を返す。
    * @return {Object} SubjectSchemaオブジェクトのリスト
    */
-  getSubject () {
+  getSubjects () {
     return this.realm.objects('Subject').sorted('id')
+  }
+
+  /**
+   * 各コンポーネントの内部状態が最新のDBの状態と一致しているならtrue、そうでないならfalseを返す
+   * @param  {Date}  updatedDate コンポーネントが最後にDBからデータを取得した時刻
+   * @return {Boolean}             最新のDBの状態とコンポーネントの内部状態が一致しているならtrue
+   *                                そうでないならfalse
+   */
+  isDBUpdated (updatedDate) {
+    return updatedDate === this.updatedDate
+  }
+
+  /**
+   * DBが最後に内容を更新した時刻を取得する
+   * @return {Date} 内容を更新した時刻
+   */
+  getUpdatedDate () {
+    return this.updatedDate
   }
 }

@@ -11,6 +11,7 @@ import {
   List,
   ListItem} from 'native-base';
 import {
+  Alert,
   AlertIOS,
   View,
   ListView,
@@ -28,25 +29,26 @@ export default class ManageSubject extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      data: []
+      subjects: []
     }
     this.ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 })
-    // 科目一覧を取得したかどうか
-    this.isFetched = false
+    // 科目一覧を取得、同期した時刻
+    this.updatedDate = null
   }
 
 /****************************************************************************
-データ操作関連
+科目データ操作関連
 ****************************************************************************/
   /**
    * 科目一覧をデータベースから取得する
    */
-  fetchSubject() {
+  fetchSubjects() {
     // 科目一覧を取得し、dataにname, idのみを持たせる
-    this.setState({data: this.props.db.getSubject().map(function (d) {
+    this.setState({subjects: this.props.db.getSubjects().map(function (d) {
       return {"name": d["name"], "id": d["id"]}
     })})
-    this.isFetched = true
+    // 同期時刻を最新にする
+    this.updatedDate = this.props.db.getUpdatedDate()
   }
 
   /**
@@ -57,21 +59,37 @@ export default class ManageSubject extends Component {
    */
   deleteSubject (secId, rowId, rowMap) {
     // データ削除
-    this.props.db.deleteSubject(this.state.data[rowId].id)
+    this.props.db.deleteSubject(this.state.subjects[rowId].id)
     // 再度科目一覧を取得し、レンダリングをリフレッシュする
     rowMap[`${secId}${rowId}`].props.closeRow()
-    this.fetchSubject()
+    this.fetchSubjects()
   }
 
   /**
    * 科目を一件登録する
-   * @param {String} text 科目名
+   * @param {String} name 科目名
    */
-  addSubject (text) {
+  addSubject (name) {
     // 空文字じゃなければ科目追加し更新する
-    if ("" !== text){
-      this.props.db.addSubject(text)
-      this.fetchSubject()
+    if ("" !== name){
+      if (!this.props.db.createSubject(name)) {
+        Alert.alert("エラー", "すでに存在する科目名です", [
+          {text: 'OK', onPress: () => {}},
+        ])
+      }
+      this.fetchSubjects()
+    }
+  }
+
+  /**
+   * 科目を更新する
+   * @param  {Number} id 科目データのID
+   * @param  {String} name  科目名
+   */
+  updateSubject (id, name) {
+    if ("" !== name) {
+      this.props.db.addSubject(id, name)
+      this.fetchSubjects()
     }
   }
 
@@ -82,30 +100,49 @@ export default class ManageSubject extends Component {
   /**
    * 科目名を入力するダイアログを表示する
    */
-  inputSubject () {
+  inputSubjectDialog () {
     AlertIOS.prompt("科目を追加", "科目名を入力してください", [
       {
         text: 'OK',
-        onPress: (inputText) => this.addSubject(inputText),
+        onPress: (inputName) => this.addSubject(inputName),
       },
       {
-          text: 'Cancel',
-          onPress: () => {},
-          style: 'cancel'
+        text: 'Cancel',
+        onPress: () => {},
+        style: 'cancel'
       },
     ],
     "plain-text")
   }
 
   /**
+   * 科目名を変更するダイアログを表示する
+   */
+  updateSubjectDialog (subject) {
+    AlertIOS.prompt("科目を変更", "科目名を入力してください", [
+      {
+        text: 'OK',
+        onPress: (inputName) => this.updateSubject(subject.id, inputName),
+      },
+      {
+        text: 'Cancel',
+        onPress: () => {},
+        style: 'cancel'
+      },
+    ],
+    "plain-text",
+    subject.name,)
+  }
+
+  /**
    * リストの一行をレンダリング
-   * @param  {string} data 出力する文字列
+   * @param  {Object} subject 出力する科目
    * @return {Component}      リストの一行のコンポーネント
    */
-  renderRow (data) {
+  renderRow (subject) {
     return (
-      <ListItem noIndent={true}>
-        <Text>{data}</Text>
+      <ListItem noIndent={true} onPress={() => this.updateSubjectDialog(subject)}>
+        <Text style={styles.subjectName}>{subject.name}</Text>
       </ListItem>
     )
   }
@@ -128,13 +165,14 @@ export default class ManageSubject extends Component {
   }
 
   /**
-   * レンダリングメソッド。
+   * 科目一覧画面のレンダリング。
    * stateが変更されたらシステムから自動で呼ばれる
    * @return {コンポーネント} レンダリングするコンポーネント
    */
   render () {
-    if (!this.isisisFetched) {
-      this.fetchSubject()
+    // 科目一覧を取得していない、最新のデータではないなら取得する
+    if (null === this.updatedDate || !this.props.db.isDBUpdated(this.updatedDate)) {
+      this.fetchSubjects()
     }
     return (
       <View style={{flex: 1}}>
@@ -146,7 +184,7 @@ export default class ManageSubject extends Component {
           </Header>
           <Content>
             <List removeClippedSubviews={false}
-              dataSource={this.ds.cloneWithRows(this.state.data.map( function (d) { return d["name"] }))}
+              dataSource={this.ds.cloneWithRows(this.state.subjects)}
               renderRow={ data => this.renderRow(data) }
               renderRightHiddenRow={ (data, secId, rowId, rowMap) => this.renderRightHidden(data, secId, rowId, rowMap) }
               rightOpenValue={-70} />
@@ -154,7 +192,7 @@ export default class ManageSubject extends Component {
         </Container>
         <View style={styles.addButton}>
           <Button rounded info
-            onPress={e => this.inputSubject()}>
+            onPress={e => this.inputSubjectDialog()}>
             <Icon name="ios-add"/>
           </Button>
         </View>
@@ -179,5 +217,11 @@ const styles = StyleSheet.create({
     bottom: 200,
     right: 30,
     flex: 1
+  },
+
+  subjectName: {
+    fontSize: 18,
+    paddingTop: 4,
+    paddingBottom: 4,
   }
 });
