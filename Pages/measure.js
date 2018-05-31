@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Picker,
   View,
+  Linking,
 } from 'react-native';
 import {
   Container,
@@ -14,7 +15,11 @@ import {
   Title,
   List,
   ListItem,
+  Icon,
+  Right,
 } from 'native-base';
+sprintf = require('sprintf').sprintf
+import config from "../config.json"
 
 
 export default class Measure extends Component {
@@ -26,6 +31,7 @@ export default class Measure extends Component {
       selectedRowId: this.DEFAULT_SELECTED_ROWID,
       subjects: [],
       measuring: false,
+      studyTime: 0
     }
     // 科目一覧を取得、同期した時刻
     this.updatedDate = null
@@ -55,8 +61,8 @@ export default class Measure extends Component {
    * 勉強時間計測を開始する
    */
   startTimer () {
-    if (this.state.selectedRowId !== -1) {
-      this.setState({measuring: true})
+    if (this.DEFAULT_SELECTED_ROWID !== this.state.selectedRowId) {
+      this.setState({measuring: true, studyTime: this.state.studyTime + 150})
     }
   }
 
@@ -64,11 +70,43 @@ export default class Measure extends Component {
    * 勉強時間計測を停止する
    */
   stopTimer () {
-    if (this.state.selectedRowId !== -1) {
+    if (this.DEFAULT_SELECTED_ROWID !== this.state.selectedRowId) {
+      this.props.db.setStudyTime(this.state.subjects[this.state.selectedRowId].name, new Date(), this.state.studyTime)
       this.setState({measuring: false})
     }
   }
 
+  /**
+   * 勉強した内容をツイートする画面を表示する
+   */
+  tweetStudy () {
+    let hours = Math.floor(this.state.studyTime / (60 * 60))
+    let minutes = Math.floor((this.state.studyTime / 60) % 60)
+    let text = this.state.subjects[this.state.selectedRowId].name + "を"
+    if (0 !== hours) {
+      text += hours + "時間"
+    }
+    if (0 !== minutes) {
+      text += minutes + "分"
+    }
+    text += "勉強しました。"
+    url  = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(text) + "&hashtags=" + encodeURIComponent(config.hashtag)
+    Linking.openURL(url);
+  }
+
+  /**
+   * 科目変更時の処理
+   * 今日勉強した科目なら時間を引き継ぐ
+   * @param  {Number} rowId 科目一覧配列のデータ番号
+   */
+  changeSubject (rowId) {
+    // 科目が選択されたらその科目の勉強時間を取得する
+    let studyTime = 0
+    if (this.DEFAULT_SELECTED_ROWID !== rowId) {
+      studyTime = this.props.db.getStudyTime(this.state.subjects[rowId].name, new Date())
+    }
+    this.setState({studyTime: studyTime, selectedRowId: rowId})
+  }
 
   /**************************************************************************
   レンダリング関連
@@ -116,6 +154,40 @@ export default class Measure extends Component {
     )
   }
 
+  /**
+   * タイマー部分のレンダリング
+   * @return {Component} タイマー部分のコンポーネント
+   */
+  renderTimer () {
+    let hours = sprintf("%d", Math.floor(this.state.studyTime / (60 * 60)))
+    let minutes = sprintf("%02d", Math.floor((this.state.studyTime / 60) % 60))
+    let seconds = sprintf("%02d", this.state.studyTime % 60)
+    return (
+      <View style={styles.timer} >
+        <Text style={styles.timerText}>{ hours + " : " + minutes + " : " + seconds}</Text>
+      </View>
+    )
+  }
+
+  /**
+   * ツイートボタンのレンダリング
+   * @return {Component} ツイートボタンのコンポーネント
+   */
+  renderTweetButton () {
+    // 勉強時間が0もしくは科目が選択されていないならツイートボタンを無効にする
+    let disabled = (0 === this.state.studyTime) || (-1 === this.state.selectedRowId)
+    // 計測中でなければレンダリングする
+    return (
+      this.state.measuring? <View /> :
+      <View style={styles.tweetButtonView}>
+        <Button iconLeft disabled={disabled} onPress={() => this.tweetStudy()}>
+          <Icon type="FontAwesome" name='twitter' />
+          <Text style={styles.tweetButtonText}>　ツイートする　</Text>
+        </Button>
+      </View>
+    )
+  }
+
 
   /**
    * 時間計測画面のレンダリング。
@@ -147,7 +219,7 @@ export default class Measure extends Component {
           <Text style={styles.subjectName}>{ "計測中" }</Text>
         </View>
         :
-        <Picker onValueChange={ (itemValue) => { this.setState({selectedRowId: itemValue}) } }
+        <Picker onValueChange={ (itemValue) => this.changeSubject(itemValue) }
           iosHeader="選択してください" mode="dropdown"
           selectedValue={this.state.selectedRowId}
           enabled={this.DEFAULT_SELECTED_ROWID === this.state.selectedRowId}>
@@ -167,10 +239,12 @@ export default class Measure extends Component {
           </Body>
         </Header>
         <Content>
-          {subjectBlock}
+          { subjectBlock }
+          { this.renderTimer() }
           <View style={styles.toggleButton}>
             {this.renderToggleButton()}
           </View>
+          { this.renderTweetButton() }
         </Content>
       </Container>
     )
@@ -191,6 +265,26 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 22,
+    color: "white",
+  },
+  timer: {
+    marginTop: 10,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  timerText: {
+    fontSize: 60,
+    color: "black",
+  },
+
+  // ツイートボタンのView
+  tweetButtonView: {
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  // ツイートボタン内のテキスト
+  tweetButtonText: {
+    fontSize: 18,
     color: "white",
   }
 });

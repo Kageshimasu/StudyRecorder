@@ -1,0 +1,19 @@
+@startuml{sequence_maesuring.png}
+actor User
+entity measuring_page
+database DB
+
+User -> measuring_page : 科目選択
+measuring_page -> DB : その科目の今日の勉強時間を取得
+
+alt その科目の今日の勉強時間が0じゃない
+  DB --> measuring_page : 勉強時間を返す
+  measuring_page -> User : その日の勉強時間を表示
+else そうでない
+  DB --> measuring_page : nullを返す
+end
+User -> measuring_page : タイマー開始する
+User -> measuring_page : タイマーを停止する
+measuring_page -> User : 勉強した累計の時間を表示する
+measuring_page -> DB : その日の科目の勉強時間を登録・上書きする
+@enduml

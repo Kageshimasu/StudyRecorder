@@ -16,7 +16,8 @@
     "react-native-scrollable-tab-view": "^0.8.0",
     "react-native-swipeable": "^0.6.0",
     "react-navigation": "^2.0.1",
-    "realm": "^2.6.0"
+    "realm": "^2.7.1",
+    "sprintf": "^0.1.5"
   },
   "devDependencies": {
     "babel-jest": "22.4.3",

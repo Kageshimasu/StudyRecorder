@@ -24,7 +24,7 @@ export default class DB {
       properties: {
         id: 'int',
         subject_id: 'int',
-        minutes: 'int',
+        seconds: 'int',
         date: 'date'
       }
     }
@@ -32,6 +32,10 @@ export default class DB {
     this.updatedDate = new Date()
   }
 
+
+  /****************************************************************************
+  科目データ関連
+  ****************************************************************************/
   /**
    * 科目を登録する。
    * 科目名が重複したらfalseを返す
@@ -93,6 +97,90 @@ export default class DB {
    */
   getSubjects () {
     return this.realm.objects('Subject').sorted('id')
+  }
+
+
+  /****************************************************************************
+  勉強時間関連
+  ****************************************************************************/
+  /**
+   * 該当する科目、日付の勉強時間を取得する
+   * 該当する科目がないならnullを返す
+   * @param  {String} subject 科目名
+   * @param  {Date} date    日付。時間・分・秒は使用しないので任意の数値で良い
+   * @return {Number}         勉強時間の秒単位
+   */
+  getStudyTime (subject, date) {
+    // 4時より前なら前の日付とする
+    if (4 > date.getHours()) {
+      date.setDate(date.getDate() - 1)
+    }
+    // 年月日以外は0にする
+    date.setHours(0)
+    date.setMinutes(0)
+    date.setSeconds(0)
+    date.setMilliseconds(0)
+    const subjectData = this.realm.objects("Subject").filtered("name = $0", subject)
+    // 科目名が登録されていないならnullを返す
+    if (0 === subjectData) {
+      return null
+    }
+    const studyData = this.realm.objects("Study").filtered("subject_id = $0", subjectData[0].id).filtered("date = $0", date)
+    // データが存在しなければ0を返す
+    if (0 === studyData.length) {
+      return 0
+    }
+    console.log("科目：" + subject + ", 秒数：" + studyData[0].seconds + ", 日付: " + date)
+    return studyData[0].seconds
+  }
+
+  /**
+   * 指定した科目・日付の勉強時間を追加・上書きする
+   * 既存データがあれば上書きになる
+   * @param {String} subject 科目名
+   * @param {Date} date    勉強した日付
+   * @param {Number} seconds 秒単位の勉強時間
+   */
+  setStudyTime (subject, date, seconds) {
+    console.log("科目：" + subject + ", 秒数： + " + seconds + ", 日付: " + date)
+    // 4時より前なら前の日付とする
+    if (4 > date.getHours()) {
+      date.setDate(date.getDate() - 1)
+    }
+    // 年月日以外は0にする
+    date.setHours(0)
+    date.setMinutes(0)
+    date.setSeconds(0)
+    date.setMilliseconds(0)
+    // 科目IDの取得
+    const subject_id = this.realm.objects("Subject").filtered('name = $0', subject)[0].id
+    // 追加・上書きするデータのIDを設定する
+    let id = -1
+    const studyData = this.realm.objects("Study").filtered("subject_id = $0", subject_id).filtered("date = $0", date)
+    // 指定された科目・日付の勉強時間がないならidは新たに生成する
+    if (0 === studyData.length) {
+      id = this.realm.objects('Subject').max('id')
+      // データが一件もなければ0にする
+      if (undefined == id || null === id) {
+        id = 0
+      }
+      id++
+    } else {
+      id = studyData[0].id
+    }
+    // データを登録・上書きする(idが既存のidなら上書きされる)
+    this.realm.write(() => {
+      this.realm.create('Study',
+        {
+          id: id,
+          subject_id: subject_id,
+          seconds: seconds,
+          date: date
+        },
+      true)
+    })
+    // DBの更新日時を更新
+    this.updatedDate = new Date()
   }
 
   /**
