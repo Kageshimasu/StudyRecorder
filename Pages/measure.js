@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+
 import {
   Text,
   StyleSheet,
@@ -6,6 +7,7 @@ import {
   View,
   Linking,
 } from 'react-native';
+
 import {
   Container,
   Content,
@@ -18,6 +20,7 @@ import {
   Icon,
   Right,
 } from 'native-base';
+
 sprintf = require('sprintf').sprintf
 import config from "../config.json"
 
@@ -25,6 +28,7 @@ import config from "../config.json"
 export default class Measure extends Component {
   constructor (props) {
     super(props)
+
     // 科目選択初期値
     this.DEFAULT_SELECTED_ROWID = -1;
     this.state = {
@@ -33,6 +37,10 @@ export default class Measure extends Component {
       measuring: false,
       studyTime: 0
     }
+
+    // タイマーオブジェクトのID
+    this.timerId = null
+
     // 科目一覧を取得、同期した時刻
     this.updatedDate = null
   }
@@ -46,8 +54,10 @@ export default class Measure extends Component {
    */
   fetchSubjects() {
     // 科目一覧を取得し、dataにname, idのみを持たせる
-    this.setState({subjects: this.props.db.getSubjects().map(function (d) {
-      return {"name": d["name"], "id": d["id"]}
+    this.setState(
+      {subjects: this.props.db.getSubjects().map(function (d) {
+      return {"name": d["name"], "id": d["id"]
+    }
     })})
     // 同期時刻を最新にする
     this.updatedDate = this.props.db.getUpdatedDate()
@@ -61,8 +71,13 @@ export default class Measure extends Component {
    * 勉強時間計測を開始する
    */
   startTimer () {
-    if (this.DEFAULT_SELECTED_ROWID !== this.state.selectedRowId) {
-      this.setState({measuring: true, studyTime: this.state.studyTime + 150})
+    if ((this.DEFAULT_SELECTED_ROWID !== this.state.selectedRowId) && (null === this.timerId)) {
+      this.setState({measuring: true})
+
+      // １秒ごとタイマーを更新する
+      this.timerId = setInterval(function() {
+        this.setState({studyTime: this.state.studyTime + 1})
+      }.bind(this), 1000)
     }
   }
 
@@ -71,8 +86,17 @@ export default class Measure extends Component {
    */
   stopTimer () {
     if (this.DEFAULT_SELECTED_ROWID !== this.state.selectedRowId) {
-      this.props.db.setStudyTime(this.state.subjects[this.state.selectedRowId].name, new Date(), this.state.studyTime)
+
+      this.props.db.setStudyTime(
+        this.state.subjects[this.state.selectedRowId].name,
+        new Date(),
+        this.state.studyTime
+      )
       this.setState({measuring: false})
+
+      // タイマーを止める
+      clearTimeout(this.timerId)
+      this.timerId = null;
     }
   }
 
